@@ -4,15 +4,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v3
+
+      - name: Hapus Windows local.properties di runner
+        run: rm -f local.properties
+
+      - name: Beri izin eksekusi gradlew
+        run: chmod +x ./gradlew
+
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
-      - name: Upload Artifact
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK ke Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: notification-killer-apk
