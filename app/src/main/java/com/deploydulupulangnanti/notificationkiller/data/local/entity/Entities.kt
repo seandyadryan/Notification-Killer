@@ -28,11 +28,11 @@ data class AppFilterEntity(
 
 @Entity(tableName = "notification_history")
 data class HistoryEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey val eventId: String,
     val packageName: String,
     val appName: String,
-    val titlePreview: String,
     val matchedRule: String,
     val actionTaken: String,
+    val result: String,
     val timestamp: Long
 )

@@ -2,15 +2,20 @@
 
 import android.app.Application
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.deploydulupulangnanti.notificationkiller.NotificationKillerApp
@@ -42,20 +47,43 @@ class AppFilterViewModel(app: Application) : AndroidViewModel(app) {
 @Composable
 fun AppFilterScreen(viewModel: AppFilterViewModel) {
     val list by viewModel.apps.collectAsState()
+    var query by remember { mutableStateOf("") }
+    var selectedOnly by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val visible = list.filter { it.packageName != context.packageName }
+        .filter { !selectedOnly || it.isBlocked || it.isWhitelisted }
+        .filter { query.isBlank() || it.appName.contains(query, true) || it.packageName.contains(query, true) }
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(list, key = { it.packageName }) { app ->
+        item {
+            Text("App filters", style = MaterialTheme.typography.headlineSmall)
+            OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Cari aplikasi") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
+            FilterChip(selected = selectedOnly, onClick = { selectedOnly = !selectedOnly }, label = { Text("Hanya dipilih") })
+        }
+        items(visible, key = { it.packageName }) { app ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    val icon = remember(app.packageName) {
+                        runCatching { context.packageManager.getApplicationIcon(app.packageName).toBitmap().asImageBitmap() }.getOrNull()
+                    }
+                    if (icon != null) Image(icon, contentDescription = "${app.appName} icon", modifier = Modifier.size(40.dp).padding(end = 8.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(app.appName, style = MaterialTheme.typography.titleMedium)
                         Text(app.packageName, style = MaterialTheme.typography.bodySmall)
+                        Text("${app.cleanedCount} permintaan hapus", style = MaterialTheme.typography.labelSmall)
                     }
-                    IconButton(onClick = { viewModel.toggleWhitelist(app, !app.isWhitelisted) }) {
-                        Icon(Icons.Default.Security, contentDescription = "Whitelist", tint = if (app.isWhitelisted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(onClick = { viewModel.toggleWhitelist(app, !app.isWhitelisted) }) {
+                            Icon(Icons.Default.Security, contentDescription = if (app.isWhitelisted) "Unprotect ${app.appName}" else "Protect ${app.appName}", tint = if (app.isWhitelisted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                        }
+                        Text("Protect", style = MaterialTheme.typography.labelSmall)
                     }
-                    Switch(checked = app.isBlocked, onCheckedChange = { viewModel.toggleBlock(app, it) })
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Switch(checked = app.isBlocked, onCheckedChange = { viewModel.toggleBlock(app, it) }, enabled = !app.isWhitelisted)
+                        Text("Filter", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }
+        if (visible.isEmpty()) item { Text("Tidak ada aplikasi yang cocok.", modifier = Modifier.padding(16.dp)) }
     }
 }

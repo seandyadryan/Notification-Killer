@@ -40,10 +40,16 @@ interface HistoryDao {
     fun getAllHistory(): Flow<List<HistoryEntity>>
 
     @Query("SELECT COUNT(*) FROM notification_history WHERE timestamp >= :sinceTimestamp")
+    fun getDetectedCountSince(sinceTimestamp: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM notification_history WHERE timestamp >= :sinceTimestamp AND actionTaken = 'AUTO_DISMISSED' AND result = 'REQUESTED'")
     fun getCleanedCountSince(sinceTimestamp: Long): Flow<Int>
 
-    @Insert
-    suspend fun insert(history: HistoryEntity)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(history: HistoryEntity): Long
+
+    @Query("SELECT COUNT(*) FROM notification_history WHERE eventId = :eventId")
+    suspend fun containsEvent(eventId: String): Int
 
     @Query("DELETE FROM notification_history")
     suspend fun clearAll()

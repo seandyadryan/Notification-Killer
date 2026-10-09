@@ -9,11 +9,9 @@ import java.util.Calendar
 
 class NotificationKillerRepository(private val db: AppDatabase, private val prefs: PreferenceManager) {
     val isAutoCleanEnabled = prefs.isAutoCleanEnabled
-    val isQuietHoursEnabled = prefs.isQuietHoursEnabled
     val retentionDays = prefs.retentionDays
 
     suspend fun setAutoClean(enabled: Boolean) = prefs.setAutoClean(enabled)
-    suspend fun setQuietHours(enabled: Boolean) = prefs.setQuietHours(enabled)
     suspend fun setRetentionDays(days: Int) = prefs.setRetentionDays(days)
 
     fun getRules(): Flow<List<KeywordRule>> = db.ruleDao().getAllRules().map { it.map { e -> e.toDomain() } }
@@ -31,7 +29,12 @@ class NotificationKillerRepository(private val db: AppDatabase, private val pref
         val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
         return db.historyDao().getCleanedCountSince(cal.timeInMillis)
     }
-    suspend fun recordHistory(h: HistoryEntity) = db.historyDao().insert(h)
+    fun getTodayDetectedCount(): Flow<Int> {
+        val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        return db.historyDao().getDetectedCountSince(cal.timeInMillis)
+    }
+    suspend fun recordHistory(h: HistoryEntity): Boolean = db.historyDao().insert(h) != -1L
+    suspend fun hasHistoryEvent(eventId: String): Boolean = db.historyDao().containsEvent(eventId) > 0
     suspend fun clearHistory() = db.historyDao().clearAll()
     suspend fun purgeOldHistory(days: Int) {
         val cutoff = System.currentTimeMillis() - (days * 24L * 60 * 60 * 1000)

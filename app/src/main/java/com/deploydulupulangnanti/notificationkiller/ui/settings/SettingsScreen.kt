@@ -1,4 +1,4 @@
-﻿package com.deploydulupulangnanti.notificationkiller.ui.settings
+package com.deploydulupulangnanti.notificationkiller.ui.settings
 
 import android.app.Application
 import androidx.compose.foundation.layout.*
@@ -15,28 +15,35 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = (app as NotificationKillerApp).repository
-    val quiet = repo.isQuietHoursEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val retention = repo.retentionDays.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
-    fun setQuiet(q: Boolean) = viewModelScope.launch { repo.setQuietHours(q) }
-    fun setRet(d: Int) = viewModelScope.launch { repo.setRetentionDays(d) }
+    fun setRetention(days: Int) = viewModelScope.launch {
+        repo.setRetentionDays(days)
+        repo.purgeOldHistory(days)
+    }
 }
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
-    val quiet by viewModel.quiet.collectAsState()
-    val ret by viewModel.retention.collectAsState()
+    val retention by viewModel.retention.collectAsState()
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Pengaturan & Privasi", style = MaterialTheme.typography.titleLarge)
+        Text("Settings & privacy", style = MaterialTheme.typography.headlineSmall)
         Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Quiet Hours", style = MaterialTheme.typography.titleMedium)
-                Switch(checked = quiet, onCheckedChange = { viewModel.setQuiet(it) })
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("On-device processing", style = MaterialTheme.typography.titleMedium)
+                Text("Notification text is read only in memory to evaluate your rules. History stores the app, time, matched rule and action, never notification text. No notification data is sent to a server.")
             }
         }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Retensi Riwayat: $ret Hari", style = MaterialTheme.typography.titleMedium)
-                Slider(value = ret.toFloat(), onValueChange = { viewModel.setRet(it.toInt()) }, valueRange = 1f..30f)
+                Text("History retention: $retention days", style = MaterialTheme.typography.titleMedium)
+                Slider(value = retention.toFloat(), onValueChange = { viewModel.setRetention(it.toInt().coerceIn(1, 30)) }, valueRange = 1f..30f, steps = 28)
+                Text("Older activity metadata is removed when the setting changes and when the app starts.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Android limits", style = MaterialTheme.typography.titleMedium)
+                Text("Notification Access must be enabled by you in Android settings. Android decides which notifications can be dismissed; a dismissal request is not a guarantee that every notification type can be removed. Quiet Hours is not enabled because it would require changing the device’s global Do Not Disturb policy.")
             }
         }
     }

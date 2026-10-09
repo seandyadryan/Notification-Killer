@@ -7,6 +7,7 @@ import com.deploydulupulangnanti.notificationkiller.data.repository.Notification
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 class NotificationKillerApp : Application() {
     lateinit var repository: NotificationKillerRepository
@@ -15,6 +16,6 @@ class NotificationKillerApp : Application() {
     override fun onCreate() {
         super.onCreate()
         repository = NotificationKillerRepository(AppDatabase.getInstance(this), PreferenceManager(this))
-        CoroutineScope(Dispatchers.IO).launch { repository.purgeOldHistory(7) }
+        CoroutineScope(Dispatchers.IO).launch { repository.purgeOldHistory(repository.retentionDays.first()) }
     }
 }

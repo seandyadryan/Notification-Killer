@@ -24,13 +24,16 @@ class NotificationProcessor {
         val title = payload.title ?: ""
         val text = payload.text ?: ""
 
-        for (rule in activeRules) {
-            if (!rule.isEnabled || rule.pattern.isBlank()) continue
-            if (matchRule(rule, title, text)) {
-                return when (rule.actionType) {
-                    ActionType.AUTO_DISMISS -> EvaluationResult.Dismiss("Rule: ${rule.pattern}", payload.packageName)
-                    ActionType.MARK_FOR_REVIEW -> EvaluationResult.MarkReview("Review: ${rule.pattern}", payload.packageName)
-                }
+        val matches = activeRules.filter { rule ->
+            rule.isEnabled && rule.pattern.isNotBlank() && matchRule(rule, title, text)
+        }
+        val actions = matches.map { it.actionType }.distinct()
+        if (actions.size > 1) return EvaluationResult.Keep("Conflicting keyword rules")
+        val rule = matches.firstOrNull()
+        if (rule != null) {
+            return when (rule.actionType) {
+                ActionType.AUTO_DISMISS -> EvaluationResult.Dismiss("Rule: ${rule.pattern}", payload.packageName)
+                ActionType.MARK_FOR_REVIEW -> EvaluationResult.MarkReview("Review: ${rule.pattern}", payload.packageName)
             }
         }
         return EvaluationResult.Keep("No rule matched")
