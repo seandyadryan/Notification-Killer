@@ -5,6 +5,12 @@
     id("com.google.devtools.ksp")
 }
 
+val releaseStoreFile = providers.environmentVariable("NK_RELEASE_STORE_FILE").orNull
+val releaseStorePassword = providers.environmentVariable("NK_RELEASE_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("NK_RELEASE_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("NK_RELEASE_KEY_PASSWORD").orNull
+val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.deploydulupulangnanti.notificationkiller"
     compileSdk = 36
@@ -21,6 +27,14 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.create("releaseFromEnvironment") {
+                    storeFile = file(releaseStoreFile!!)
+                    storePassword = releaseStorePassword
+                    keyAlias = releaseKeyAlias
+                    keyPassword = releaseKeyPassword
+                }
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {

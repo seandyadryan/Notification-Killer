@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.*
@@ -31,8 +32,8 @@ class MainActivity : ComponentActivity() {
                             val currentRoute = navBackStackEntry?.destination?.route
                             screens.forEach { screen ->
                                 NavigationBarItem(
-                                    icon = { Icon(screen.icon, screen.title) },
-                                    label = { Text(screen.title) },
+                                    icon = { Icon(screen.icon, stringResource(screen.title)) },
+                                    label = { Text(stringResource(screen.title)) },
                                     selected = currentRoute == screen.route,
                                     onClick = { navController.navigate(screen.route) { launchSingleTop = true; restoreState = true } }
                                 )

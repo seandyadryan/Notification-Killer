@@ -14,11 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.deploydulupulangnanti.notificationkiller.NotificationKillerApp
+import com.deploydulupulangnanti.notificationkiller.R
 import com.deploydulupulangnanti.notificationkiller.domain.model.AppFilter
 import com.deploydulupulangnanti.notificationkiller.util.AppInstalledHelper
 import kotlinx.coroutines.Dispatchers
@@ -55,9 +57,9 @@ fun AppFilterScreen(viewModel: AppFilterViewModel) {
         .filter { query.isBlank() || it.appName.contains(query, true) || it.packageName.contains(query, true) }
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Text("App filters", style = MaterialTheme.typography.headlineSmall)
-            OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Cari aplikasi") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
-            FilterChip(selected = selectedOnly, onClick = { selectedOnly = !selectedOnly }, label = { Text("Hanya dipilih") })
+            Text(stringResource(R.string.app_filters_title), style = MaterialTheme.typography.headlineSmall)
+            OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.search_apps)) }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
+            FilterChip(selected = selectedOnly, onClick = { selectedOnly = !selectedOnly }, label = { Text(stringResource(R.string.selected_only)) })
         }
         items(visible, key = { it.packageName }) { app ->
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -69,21 +71,21 @@ fun AppFilterScreen(viewModel: AppFilterViewModel) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(app.appName, style = MaterialTheme.typography.titleMedium)
                         Text(app.packageName, style = MaterialTheme.typography.bodySmall)
-                        Text("${app.cleanedCount} permintaan hapus", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.dismiss_count, app.cleanedCount), style = MaterialTheme.typography.labelSmall)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(onClick = { viewModel.toggleWhitelist(app, !app.isWhitelisted) }) {
-                            Icon(Icons.Default.Security, contentDescription = if (app.isWhitelisted) "Unprotect ${app.appName}" else "Protect ${app.appName}", tint = if (app.isWhitelisted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                            Icon(Icons.Default.Security, contentDescription = stringResource(if (app.isWhitelisted) R.string.unprotect_app else R.string.protect_app, app.appName), tint = if (app.isWhitelisted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
                         }
-                        Text("Protect", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.protect), style = MaterialTheme.typography.labelSmall)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Switch(checked = app.isBlocked, onCheckedChange = { viewModel.toggleBlock(app, it) }, enabled = !app.isWhitelisted)
-                        Text("Filter", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.filter), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
         }
-        if (visible.isEmpty()) item { Text("Tidak ada aplikasi yang cocok.", modifier = Modifier.padding(16.dp)) }
+        if (visible.isEmpty()) item { Text(stringResource(R.string.no_apps_found), modifier = Modifier.padding(16.dp)) }
     }
 }

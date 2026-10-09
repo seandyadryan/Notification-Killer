@@ -12,9 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.deploydulupulangnanti.notificationkiller.NotificationKillerApp
+import com.deploydulupulangnanti.notificationkiller.R
 import com.deploydulupulangnanti.notificationkiller.domain.engine.RegexSafetyHelper
 import com.deploydulupulangnanti.notificationkiller.domain.model.ActionType
 import com.deploydulupulangnanti.notificationkiller.domain.model.KeywordRule
@@ -37,23 +40,23 @@ fun KeywordScreen(viewModel: KeywordViewModel) {
     val rules by viewModel.rules.collectAsState()
     var editing by remember { mutableStateOf<KeywordRule?>(null) }
     var createNew by remember { mutableStateOf(false) }
-    Scaffold(floatingActionButton = { FloatingActionButton(onClick = { createNew = true }) { Icon(Icons.Default.Add, "Add rule") } }) { pad ->
+    Scaffold(floatingActionButton = { FloatingActionButton(onClick = { createNew = true }) { Icon(Icons.Default.Add, stringResource(R.string.add_rule)) } }) { pad ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
-                Text("Keyword rules", style = MaterialTheme.typography.headlineSmall)
-                Text("Rules run only when Auto-Clean is enabled. Protected apps always take priority.", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.keyword_rules_title), style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.keyword_rules_help), style = MaterialTheme.typography.bodyMedium)
             }
-            if (rules.isEmpty()) item { Text("Belum ada aturan. Tambahkan aturan untuk memeriksa judul atau teks notifikasi.", modifier = Modifier.padding(12.dp)) }
+            if (rules.isEmpty()) item { Text(stringResource(R.string.no_rules), modifier = Modifier.padding(12.dp)) }
             items(rules, key = { it.id }) { rule ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(rule.pattern, style = MaterialTheme.typography.titleMedium)
-                            Text("${rule.ruleType.label} • ${rule.scope.label}", style = MaterialTheme.typography.bodySmall)
-                            Text(if (rule.actionType == ActionType.AUTO_DISMISS) "Auto-dismiss" else "Mark for review", style = MaterialTheme.typography.labelSmall)
+                            Text("${stringResource(rule.ruleType.resource)} • ${stringResource(rule.scope.resource)}", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(rule.actionType.resource), style = MaterialTheme.typography.labelSmall)
                         }
-                        IconButton(onClick = { editing = rule }) { Icon(Icons.Default.Edit, "Edit rule") }
-                        IconButton(onClick = { viewModel.deleteRule(rule) }) { Icon(Icons.Default.Delete, "Delete rule") }
+                        IconButton(onClick = { editing = rule }) { Icon(Icons.Default.Edit, stringResource(R.string.edit_rule)) }
+                        IconButton(onClick = { viewModel.deleteRule(rule) }) { Icon(Icons.Default.Delete, stringResource(R.string.delete)) }
                         Switch(checked = rule.isEnabled, onCheckedChange = { viewModel.toggle(rule, it) })
                     }
                 }
@@ -77,30 +80,34 @@ private fun RuleEditorDialog(initial: KeywordRule?, onDismiss: () -> Unit, onSav
     var action by remember(initial) { mutableStateOf(initial?.actionType ?: ActionType.AUTO_DISMISS) }
     var caseSensitive by remember(initial) { mutableStateOf(initial?.isCaseSensitive ?: false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val typeOptions = listOf(R.string.match_contains, R.string.match_exact, R.string.match_starts, R.string.match_regex).map { stringResource(it) }
+    val scopeOptions = listOf(R.string.scope_title, R.string.scope_text, R.string.scope_both).map { stringResource(it) }
+    val actionOptions = listOf(R.string.auto_dismiss, R.string.mark_for_review).map { stringResource(it) }
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "Add keyword rule" else "Edit keyword rule") },
+        title = { Text(stringResource(if (initial == null) R.string.add_rule else R.string.edit_rule)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(pattern, { pattern = it; error = null }, label = { Text("Text or regular expression") }, singleLine = true)
-                EnumDropdown("Match", type.label, RuleType.entries.map { it.label }) { selected -> type = RuleType.entries.first { it.label == selected }; error = null }
-                EnumDropdown("Apply to", scope.label, RuleScope.entries.map { it.label }) { selected -> scope = RuleScope.entries.first { it.label == selected } }
-                EnumDropdown("Action", action.label, ActionType.entries.map { it.label }) { selected -> action = ActionType.entries.first { it.label == selected } }
+                OutlinedTextField(pattern, { pattern = it; error = null }, label = { Text(stringResource(R.string.rule_pattern_hint)) }, singleLine = true)
+                EnumDropdown(stringResource(R.string.match_type), stringResource(type.resource), typeOptions) { selected -> type = RuleType.entries[typeOptions.indexOf(selected).coerceAtLeast(0)]; error = null }
+                EnumDropdown(stringResource(R.string.rule_scope), stringResource(scope.resource), scopeOptions) { selected -> scope = RuleScope.entries[scopeOptions.indexOf(selected).coerceAtLeast(0)] }
+                EnumDropdown(stringResource(R.string.rule_action), stringResource(action.resource), actionOptions) { selected -> action = ActionType.entries[actionOptions.indexOf(selected).coerceAtLeast(0)] }
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Checkbox(checked = caseSensitive, onCheckedChange = { caseSensitive = it })
-                    Text("Case-sensitive")
+                    Text(stringResource(R.string.case_sensitive))
                 }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
         },
         confirmButton = {
             Button(onClick = {
-                if (pattern.isBlank()) error = "Masukkan teks atau pola yang tidak kosong."
-                else if (type == RuleType.REGEX && RegexSafetyHelper.compileSafeRegex(pattern, caseSensitive) == null) error = "Regex tidak valid atau terlalu kompleks. Gunakan pola sederhana (maksimal 100 karakter)."
+                if (pattern.isBlank()) error = context.getString(R.string.empty_pattern_error)
+                else if (type == RuleType.REGEX && RegexSafetyHelper.compileSafeRegex(pattern, caseSensitive) == null) error = context.getString(R.string.unsafe_regex_error)
                 else onSave(KeywordRule(initial?.id ?: 0, pattern.trim(), type, scope, caseSensitive, action, initial?.isEnabled ?: true))
-            }) { Text("Save") }
+            }) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 
@@ -116,18 +123,18 @@ private fun EnumDropdown(label: String, selected: String, options: List<String>,
     }
 }
 
-private val RuleType.label: String get() = when (this) {
-    RuleType.CONTAINS -> "Contains"
-    RuleType.EXACT_MATCH -> "Exact match"
-    RuleType.STARTS_WITH -> "Starts with"
-    RuleType.REGEX -> "Regular expression"
+private val RuleType.resource: Int get() = when (this) {
+    RuleType.CONTAINS -> R.string.match_contains
+    RuleType.EXACT_MATCH -> R.string.match_exact
+    RuleType.STARTS_WITH -> R.string.match_starts
+    RuleType.REGEX -> R.string.match_regex
 }
-private val RuleScope.label: String get() = when (this) {
-    RuleScope.TITLE_ONLY -> "Title"
-    RuleScope.TEXT_ONLY -> "Text"
-    RuleScope.TITLE_OR_TEXT -> "Title or text"
+private val RuleScope.resource: Int get() = when (this) {
+    RuleScope.TITLE_ONLY -> R.string.scope_title
+    RuleScope.TEXT_ONLY -> R.string.scope_text
+    RuleScope.TITLE_OR_TEXT -> R.string.scope_both
 }
-private val ActionType.label: String get() = when (this) {
-    ActionType.AUTO_DISMISS -> "Auto-dismiss"
-    ActionType.MARK_FOR_REVIEW -> "Mark for review"
+private val ActionType.resource: Int get() = when (this) {
+    ActionType.AUTO_DISMISS -> R.string.auto_dismiss
+    ActionType.MARK_FOR_REVIEW -> R.string.mark_for_review
 }

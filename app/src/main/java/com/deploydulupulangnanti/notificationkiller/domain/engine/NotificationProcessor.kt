@@ -32,8 +32,8 @@ class NotificationProcessor {
         val rule = matches.firstOrNull()
         if (rule != null) {
             return when (rule.actionType) {
-                ActionType.AUTO_DISMISS -> EvaluationResult.Dismiss("Rule: ${rule.pattern}", payload.packageName)
-                ActionType.MARK_FOR_REVIEW -> EvaluationResult.MarkReview("Review: ${rule.pattern}", payload.packageName)
+                ActionType.AUTO_DISMISS -> EvaluationResult.Dismiss(rule.pattern, payload.packageName)
+                ActionType.MARK_FOR_REVIEW -> EvaluationResult.MarkReview(rule.pattern, payload.packageName)
             }
         }
         return EvaluationResult.Keep("No rule matched")
