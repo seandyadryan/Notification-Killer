@@ -31,11 +31,14 @@ class KillerNotificationListenerService : NotificationListenerService() {
         super.onListenerConnected()
         listenerReady = true
         ListenerRuntime.isConnected = true
+        ListenerRuntime.service = this
+        recheckActiveNotifications()
     }
 
     override fun onListenerDisconnected() {
         listenerReady = false
         ListenerRuntime.isConnected = false
+        ListenerRuntime.service = null
         super.onListenerDisconnected()
         requestRebind(android.content.ComponentName(this, KillerNotificationListenerService::class.java))
     }
@@ -44,6 +47,18 @@ class KillerNotificationListenerService : NotificationListenerService() {
         super.onNotificationPosted(sbn)
         if (!listenerReady) return
         val posted = sbn ?: return
+        val eventId = eventId(posted)
+        if (!seenEvents.markIfNew(eventId)) return
+        processNotification(posted, eventId, isRecheck = false)
+    }
+
+    fun recheckActiveNotifications() {
+        if (!listenerReady) return
+        val active = runCatching { activeNotifications.orEmpty().toList() }.getOrDefault(emptyList())
+        active.forEach { posted -> processNotification(posted, eventId(posted), isRecheck = true) }
+    }
+
+    private fun processNotification(posted: StatusBarNotification, eventId: String, isRecheck: Boolean) {
         val app = application as? NotificationKillerApp ?: return
         // Copy only the fields needed for evaluation. Notification text is never persisted or logged.
         val extras = posted.notification.extras
@@ -58,14 +73,11 @@ class KillerNotificationListenerService : NotificationListenerService() {
             isOngoing = posted.isOngoing,
             isClearable = posted.isClearable
         )
-        val eventId = digest("${payload.packageName}|${payload.key}|${payload.postTime}")
-        if (!seenEvents.markIfNew(eventId)) return
-
         scope.launch {
             try {
                 if (!listenerReady) return@launch
                 val repo = app.repository
-                if (repo.hasHistoryEvent(eventId)) return@launch
+                if (!isRecheck && repo.hasHistoryEvent(eventId)) return@launch
                 val masterEnabled = repo.isAutoCleanEnabled.first()
                 val filter = repo.getAppFilter(payload.packageName)
                 val rules = repo.getActiveRules()
@@ -74,19 +86,23 @@ class KillerNotificationListenerService : NotificationListenerService() {
                 val action: String
                 val result: String
                 val matchedRule: String
+                var newDismissalRequest = false
                 when (outcome) {
                     is EvaluationResult.Dismiss -> {
                         action = "AUTO_DISMISSED"
                         matchedRule = outcome.matchedRule
                         result = try {
-                            withContext(Dispatchers.Main.immediate) {
+                            newDismissalRequest = withContext(Dispatchers.Main.immediate) {
                                 if (!listenerReady) throw IllegalStateException("Listener disconnected")
-                                dismissalRequests.add(payload.key)
+                                if (!dismissalRequests.add(payload.key)) return@withContext false
                                 cancelNotification(payload.key)
+                                true
                             }
-                            scope.launch {
-                                delay(DISMISSAL_CALLBACK_TIMEOUT_MS)
-                                dismissalRequests.remove(payload.key)
+                            if (newDismissalRequest) {
+                                scope.launch {
+                                    delay(DISMISSAL_CALLBACK_TIMEOUT_MS)
+                                    dismissalRequests.remove(payload.key)
+                                }
                             }
                             "REQUESTED"
                         } catch (_: Exception) {
@@ -105,7 +121,7 @@ class KillerNotificationListenerService : NotificationListenerService() {
                         matchedRule = ""
                     }
                 }
-                val inserted = repo.recordHistory(
+                repo.recordHistory(
                     HistoryEntity(
                         eventId = eventId,
                         packageName = payload.packageName,
@@ -116,7 +132,7 @@ class KillerNotificationListenerService : NotificationListenerService() {
                         timestamp = System.currentTimeMillis()
                     )
                 )
-                if (inserted && action == "AUTO_DISMISSED" && result == "REQUESTED") {
+                if (action == "AUTO_DISMISSED" && result == "REQUESTED" && newDismissalRequest) {
                     repo.incrementAppCleaned(payload.packageName)
                 }
             } catch (cancelled: CancellationException) {
@@ -137,6 +153,7 @@ class KillerNotificationListenerService : NotificationListenerService() {
     override fun onDestroy() {
         listenerReady = false
         ListenerRuntime.isConnected = false
+        if (ListenerRuntime.service === this) ListenerRuntime.service = null
         scope.cancel()
         super.onDestroy()
     }
@@ -145,12 +162,18 @@ class KillerNotificationListenerService : NotificationListenerService() {
         .digest(value.toByteArray(Charsets.UTF_8))
         .joinToString("") { "%02x".format(it) }
 
+    private fun eventId(posted: StatusBarNotification): String =
+        digest("${posted.packageName}|${posted.key}|${posted.postTime}")
+
     companion object {
         private const val DISMISSAL_CALLBACK_TIMEOUT_MS = 60_000L
     }
 }
 
 object ListenerRuntime {
+    @Volatile internal var service: KillerNotificationListenerService? = null
     @Volatile var isConnected: Boolean = false
         internal set
+
+    fun recheckActiveNotifications() { service?.recheckActiveNotifications() }
 }

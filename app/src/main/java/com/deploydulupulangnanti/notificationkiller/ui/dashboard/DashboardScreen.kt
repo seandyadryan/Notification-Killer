@@ -54,7 +54,10 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardUiState())
 
     fun refresh() { _access.value = NotificationAccessHelper.isNotificationAccessGranted(getApplication()) && ListenerRuntime.isConnected }
-    fun toggleAutoClean(enabled: Boolean) = viewModelScope.launch { repo.setAutoClean(enabled) }
+    fun toggleAutoClean(enabled: Boolean) = viewModelScope.launch {
+        repo.setAutoClean(enabled)
+        if (enabled) ListenerRuntime.recheckActiveNotifications()
+    }
 }
 
 @Composable
@@ -91,9 +94,12 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
         }
         item {
             Card {
-                Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.auto_clean), style = MaterialTheme.typography.titleMedium)
-                    Switch(checked = state.isAutoCleanEnabled, onCheckedChange = { viewModel.toggleAutoClean(it) })
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.auto_clean), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Switch(checked = state.isAutoCleanEnabled, onCheckedChange = { viewModel.toggleAutoClean(it) })
+                    }
+                    Text(stringResource(R.string.auto_clean_help), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

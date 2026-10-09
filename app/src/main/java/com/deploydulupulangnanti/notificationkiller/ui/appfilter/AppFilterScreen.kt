@@ -21,6 +21,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.deploydulupulangnanti.notificationkiller.NotificationKillerApp
 import com.deploydulupulangnanti.notificationkiller.R
+import com.deploydulupulangnanti.notificationkiller.service.ListenerRuntime
 import com.deploydulupulangnanti.notificationkiller.domain.model.AppFilter
 import com.deploydulupulangnanti.notificationkiller.util.AppInstalledHelper
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +43,14 @@ class AppFilterViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
-    fun toggleBlock(app: AppFilter, b: Boolean) = viewModelScope.launch { repo.saveAppFilter(app.copy(isBlocked = b, isWhitelisted = if (b) false else app.isWhitelisted)) }
-    fun toggleWhitelist(app: AppFilter, w: Boolean) = viewModelScope.launch { repo.saveAppFilter(app.copy(isWhitelisted = w, isBlocked = if (w) false else app.isBlocked)) }
+    fun toggleBlock(app: AppFilter, b: Boolean) = viewModelScope.launch {
+        repo.saveAppFilter(app.copy(isBlocked = b, isWhitelisted = if (b) false else app.isWhitelisted))
+        ListenerRuntime.recheckActiveNotifications()
+    }
+    fun toggleWhitelist(app: AppFilter, w: Boolean) = viewModelScope.launch {
+        repo.saveAppFilter(app.copy(isWhitelisted = w, isBlocked = if (w) false else app.isBlocked))
+        ListenerRuntime.recheckActiveNotifications()
+    }
 }
 
 @Composable
@@ -58,6 +65,7 @@ fun AppFilterScreen(viewModel: AppFilterViewModel) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             Text(stringResource(R.string.app_filters_title), style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.app_filters_help), style = MaterialTheme.typography.bodyMedium)
             OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.search_apps)) }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
             FilterChip(selected = selectedOnly, onClick = { selectedOnly = !selectedOnly }, label = { Text(stringResource(R.string.selected_only)) })
         }

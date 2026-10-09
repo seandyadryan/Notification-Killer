@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Notification Killer</string>
-    <string name="screen_dashboard">Dashboard</string>
+    <string name="screen_dashboard">Home</string>
     <string name="screen_apps">Apps</string>
     <string name="screen_rules">Rules</string>
     <string name="screen_history">History</string>
@@ -13,19 +13,21 @@
     <string name="access_explanation">This access lets the app read notification titles and text temporarily to evaluate your rules. Content is not stored or sent; history keeps activity metadata only.</string>
     <string name="open_access_settings">Open notification access settings</string>
     <string name="auto_clean">Enable Auto-Clean</string>
+    <string name="auto_clean_help">Auto-Clean only dismisses notifications from apps set to Clear all or matched by an Auto-dismiss rule. Changes also check visible notifications.</string>
     <string name="detected_today">Detected today</string>
     <string name="dismiss_requests">Dismissal requests</string>
     <string name="filtered_apps">Filtered apps</string>
     <string name="active_rules">Active rules</string>
     <string name="recent_activity">Recent activity</string>
     <string name="app_filters_title">App filters</string>
+    <string name="app_filters_help">Clear all removes clearable notifications from this app. Keep excludes it from Auto-Clean. Auto-Clean must be enabled.</string>
     <string name="search_apps">Search apps</string>
     <string name="selected_only">Selected only</string>
     <string name="dismiss_count">%1$d dismissal requests</string>
-    <string name="protect_app">Protect %1$s</string>
-    <string name="unprotect_app">Stop protecting %1$s</string>
-    <string name="protect">Protect</string>
-    <string name="filter">Filter</string>
+    <string name="protect_app">Keep %1$s</string>
+    <string name="unprotect_app">Allow cleaning for %1$s</string>
+    <string name="protect">Keep</string>
+    <string name="filter">Clear all</string>
     <string name="no_apps_found">No matching apps.</string>
     <string name="keyword_rules_title">Keyword rules</string>
     <string name="keyword_rules_help">Rules run only while Auto-Clean is enabled. Protected apps always take priority.</string>

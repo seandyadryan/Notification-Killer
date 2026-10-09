@@ -18,6 +18,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.deploydulupulangnanti.notificationkiller.NotificationKillerApp
 import com.deploydulupulangnanti.notificationkiller.R
+import com.deploydulupulangnanti.notificationkiller.service.ListenerRuntime
 import com.deploydulupulangnanti.notificationkiller.domain.engine.RegexSafetyHelper
 import com.deploydulupulangnanti.notificationkiller.domain.model.ActionType
 import com.deploydulupulangnanti.notificationkiller.domain.model.KeywordRule
@@ -30,9 +31,18 @@ import kotlinx.coroutines.launch
 class KeywordViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = (app as NotificationKillerApp).repository
     val rules = repo.getRules().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    fun saveRule(rule: KeywordRule) = viewModelScope.launch { repo.saveRule(rule) }
-    fun deleteRule(rule: KeywordRule) = viewModelScope.launch { repo.deleteRule(rule) }
-    fun toggle(rule: KeywordRule, enabled: Boolean) = viewModelScope.launch { repo.saveRule(rule.copy(isEnabled = enabled)) }
+    fun saveRule(rule: KeywordRule) = viewModelScope.launch {
+        repo.saveRule(rule)
+        ListenerRuntime.recheckActiveNotifications()
+    }
+    fun deleteRule(rule: KeywordRule) = viewModelScope.launch {
+        repo.deleteRule(rule)
+        ListenerRuntime.recheckActiveNotifications()
+    }
+    fun toggle(rule: KeywordRule, enabled: Boolean) = viewModelScope.launch {
+        repo.saveRule(rule.copy(isEnabled = enabled))
+        ListenerRuntime.recheckActiveNotifications()
+    }
 }
 
 @Composable
